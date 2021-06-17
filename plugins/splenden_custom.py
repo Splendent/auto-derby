@@ -1,6 +1,5 @@
 import auto_derby
-from auto_derby import single_mode
-
+from auto_derby import single_mode, mathtools
 
 class Example_Training(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
