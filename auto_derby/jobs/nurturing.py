@@ -107,8 +107,11 @@ def _handle_training(ctx: Context) -> None:
             # go to race
             action.wait_click_image(templates.RETURN_BUTTON)
             action.wait_click_image(templates.SINGLE_MODE_COMMAND_RACE)
-            time.sleep(0.5)
-            if action.count_image(templates.SINGLE_MODE_CONTINUOUS_RACE_TITLE):
+            tmpl, _ = action.wait_image(
+                templates.SINGLE_MODE_RACE_START_BUTTON,
+                templates.SINGLE_MODE_CONTINUOUS_RACE_TITLE,
+            )
+            if tmpl.name == templates.SINGLE_MODE_CONTINUOUS_RACE_TITLE:
                 if ctx.continuous_race_count() >= 3:
                     action.wait_click_image(templates.GREEN_OK_BUTTON)
                 else:
@@ -207,7 +210,7 @@ def _choose_running_style(ctx: Context, race1: race.Race) -> None:
 def _handle_race(ctx: Context, race1: Optional[race.Race] = None):
     race1 = race1 or _current_race(ctx)
     estimate_order = race1.estimate_order(ctx)
-    if estimate_order > config.PAUSE_IF_RACE_ORDER_GT:
+    if estimate_order > config.pause_if_race_order_gt:
         close_msg = window.info(
             "Race estimate result is No.%d\nplease learn skills before confirm in terminal"
             % estimate_order
@@ -266,7 +269,7 @@ def _update_context_by_command_scene(ctx: Context):
 
 
 def nurturing():
-    ctx = Context()
+    ctx = Context.new()
 
     while True:
         tmpl, pos = action.wait_image(
