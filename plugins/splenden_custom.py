@@ -1,6 +1,8 @@
 import auto_derby
 from auto_derby import single_mode, mathtools
+import logging
 
+LOGGER = logging.getLogger(__name__)
 class Example_Training(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
         ret = super().score(ctx)
@@ -105,17 +107,26 @@ class Race(single_mode.Race):
         if self.ground_status(ctx) < ctx.STATUS_B:
             status_penality += 10
 
+        # 目標還是希望訓練比比賽多，低級比賽予以較重懲罰偏差，再次降低SKILL POINT重要性
         SP_bias_fan, SP_bias_prop = {
             Race.GRADE_G1: (1,1),
             Race.GRADE_G2: (0.5,0.8),
-            Race.GRADE_G3: (0.3,0.5),
-            Race.GRADE_OP: (0.1,0.3),
+            Race.GRADE_G3: (0.3,0.7),
+            Race.GRADE_OP: (0.1,0.7),
             Race.GRADE_PRE_OP: (0.1,0.1),
             Race.GRADE_NOT_WINNING: (1,1),
             Race.GRADE_DEBUT: (1,1),
         }[self.grade]
-
-        return (
+        original = (
+            fan_score
+            + prop
+            + skill * 0.5
+            + not_winning_score
+            - continuous_race_penalty
+            - fail_penalty
+            - status_penality
+        )
+        biased = (
             fan_score * SP_bias_fan
             + prop * SP_bias_prop
             + skill * 0.5
@@ -124,12 +135,13 @@ class Race(single_mode.Race):
             - fail_penalty
             - status_penality
         )
+        LOGGER.info("[Custom]%20s\torig:%2.2f\t biased:%2.2f", self, original, biased)
+
+        return biased
 
 class Plugin(auto_derby.Plugin):
     def install(self) -> None:
-        # auto_derby.config.SINGLE_MODE_TRAINING_CLASS = Example_Training
-        # auto_derby.config.SINGLE_MODE_RACE_CLASS = Example_Race
-        auto_derby.config.SINGLE_MODE_RACE_CLASS = Race
+        auto_derby.config.single_mode_race_class = Race
 
 
 auto_derby.plugin.register(__name__, Plugin())
