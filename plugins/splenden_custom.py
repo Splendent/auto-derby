@@ -76,15 +76,7 @@ class Race(single_mode.Race):
                 (int(expected_fan_count * 0.5), 4.0),
                 (int(expected_fan_count), 1.0),
             ),
-        ) / mathtools.interpolate(
-            ctx.speed,
-            (
-                (0, 2400),
-                (300, 1800),
-                (600, 800),
-                (900, 600),
-            ),
-        )
+        ) / 600
 
         not_winning_score = 0 if ctx.is_after_winning else 1.5 * ctx.turn_count()
 
@@ -116,13 +108,24 @@ class Race(single_mode.Race):
         # 目標還是希望訓練比比賽多，低級比賽予以較重懲罰偏差，再次降低SKILL POINT重要性
         SP_bias_fan, SP_bias_prop = {
             Race.GRADE_G1: (1,1),
-            Race.GRADE_G2: (0.5,0.8),
-            Race.GRADE_G3: (0.3,0.7),
-            Race.GRADE_OP: (0.1,0.7),
+            Race.GRADE_G2: (0.9,1),
+            Race.GRADE_G3: (0.7,0.7),
+            Race.GRADE_OP: (0.5,0.7),
             Race.GRADE_PRE_OP: (0.1,0.1),
             Race.GRADE_NOT_WINNING: (1,1),
             Race.GRADE_DEBUT: (1,1),
         }[self.grade]
+
+        
+        SP_status_bias = mathtools.interpolate(
+            (ctx.speed + ctx.stamina + ctx.power),
+            (
+                (0, 4),
+                (1000, 3),
+                (1450, 1.2),
+                (1800, 1),
+            ),
+        )
         #不想輸!!!!
         SP_fail_penalty = mathtools.interpolate(
             estimate_order,
@@ -154,9 +157,11 @@ class Race(single_mode.Race):
             - status_penality
         )
         biased = (
-            fan_score * SP_bias_fan
-            + prop * SP_bias_prop
-            + skill * 0.5
+            ( 
+                fan_score * SP_bias_fan
+                + prop * SP_bias_prop
+                + skill * 0.5 
+            ) / SP_status_bias
             + not_winning_score
             - SP_continuous_race_penalty
             - SP_fail_penalty
