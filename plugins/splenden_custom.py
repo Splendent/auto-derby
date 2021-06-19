@@ -67,18 +67,23 @@ class Race(single_mode.Race):
             ),
         )
 
-        fan_score = (
-            mathtools.integrate(
-                ctx.fan_count,
-                fan_count,
-                (
-                    (int(expected_fan_count * 0.1), 8.0),
-                    (int(expected_fan_count * 0.3), 6.0),
-                    (int(expected_fan_count * 0.5), 4.0),
-                    (int(expected_fan_count), 1.0),
-                ),
-            )
-            / 600
+        fan_score = mathtools.integrate(
+            ctx.fan_count,
+            fan_count,
+            (
+                (int(expected_fan_count * 0.1), 8.0),
+                (int(expected_fan_count * 0.3), 6.0),
+                (int(expected_fan_count * 0.5), 4.0),
+                (int(expected_fan_count), 1.0),
+            ),
+        ) / mathtools.interpolate(
+            ctx.speed,
+            (
+                (0, 2400),
+                (300, 1800),
+                (600, 800),
+                (900, 600),
+            ),
         )
 
         not_winning_score = 0 if ctx.is_after_winning else 1.5 * ctx.turn_count()
@@ -107,6 +112,7 @@ class Race(single_mode.Race):
         if self.ground_status(ctx) < ctx.STATUS_B:
             status_penality += 10
 
+        
         # 目標還是希望訓練比比賽多，低級比賽予以較重懲罰偏差，再次降低SKILL POINT重要性
         SP_bias_fan, SP_bias_prop = {
             Race.GRADE_G1: (1,1),
@@ -117,6 +123,27 @@ class Race(single_mode.Race):
             Race.GRADE_NOT_WINNING: (1,1),
             Race.GRADE_DEBUT: (1,1),
         }[self.grade]
+        #不想輸!!!!
+        SP_fail_penalty = mathtools.interpolate(
+            estimate_order,
+            (
+                (1, 0),
+                (3, 1),
+                (5, 2),
+                (6, 5),
+                (12, 15),
+            ),
+        )
+        #更低的連跑降心情可能
+        SP_continuous_race_penalty = continuous_race_penalty = mathtools.interpolate(
+            ctx.continuous_race_count(),
+            (
+                (2, 0),
+                (3, 10),
+                (4, 25),
+                (5, 50),
+            ),
+        )
         original = (
             fan_score
             + prop
@@ -131,11 +158,11 @@ class Race(single_mode.Race):
             + prop * SP_bias_prop
             + skill * 0.5
             + not_winning_score
-            - continuous_race_penalty
-            - fail_penalty
+            - SP_continuous_race_penalty
+            - SP_fail_penalty
             - status_penality
         )
-        LOGGER.info("[Custom]%20s\torig:%2.2f\t biased:%2.2f", self, original, biased)
+        LOGGER.info("[Custom]%30s\torig:%2.2f\t biased:%2.2f", self, original, biased)
 
         return biased
 
