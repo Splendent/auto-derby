@@ -348,12 +348,35 @@ class Context:
         return 24 * 3 + 6
 
     def continuous_race_count(self) -> int:
-        ret = 0
+        ret = 1
         turn = self.turn_count() - 1
         while turn in self.race_turns:
             ret += 1
             turn -= 1
         return ret
+
+    def expected_score(self) -> float:
+        expected_score = 15 + self.turn_count() * 10 / 24
+
+        is_summer_camp = self.date[1:] in ((7, 1), (7, 2), (8, 1))
+        can_heal_condition = not is_summer_camp
+        if self.vitality > 0.5:
+            expected_score *= 0.5
+        if self.turn_count() >= self.total_turn_count() - 2:
+            expected_score *= 0.1
+        if self.date[1:] in ((6, 1),) and self.vitality < 0.8:
+            expected_score += 10
+        if self.date[1:] in ((6, 2),) and self.vitality < 0.9:
+            expected_score += 20
+        if is_summer_camp and self.vitality < 0.8:
+            expected_score += 10
+        if self.date in ((4, 0, 0)):
+            expected_score -= 20
+        if can_heal_condition and self.CONDITION_HEADACHE in self.conditions:
+            expected_score += 20
+        expected_score += (self.MOOD_VERY_GOOD[0] - self.mood[0]) * 40 * 3
+
+        return expected_score
 
 
 g.context_class = Context
