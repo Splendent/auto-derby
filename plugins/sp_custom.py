@@ -17,7 +17,7 @@ class Example_Race(single_mode.Race):
         return ret
 
 
-class Race(single_mode.Race): 
+class Race_Less(single_mode.Race): 
     def score(self, ctx: single_mode.Context) -> float:
         estimate_order = self.estimate_order(ctx)
         if estimate_order == 1:
@@ -108,9 +108,9 @@ class Race(single_mode.Race):
         # 目標還是希望訓練比比賽多，低級比賽予以較重懲罰偏差，再次降低SKILL POINT重要性
         SP_bias_fan, SP_bias_prop = {
             Race.GRADE_G1: (1,1),
-            Race.GRADE_G2: (0.9,1),
-            Race.GRADE_G3: (0.7,0.7),
-            Race.GRADE_OP: (0.5,0.7),
+            Race.GRADE_G2: (0.7,1),
+            Race.GRADE_G3: (0.5,0.5),
+            Race.GRADE_OP: (0.3,0.5),
             Race.GRADE_PRE_OP: (0.1,0.1),
             Race.GRADE_NOT_WINNING: (1,1),
             Race.GRADE_DEBUT: (1,1),
@@ -120,8 +120,8 @@ class Race(single_mode.Race):
         SP_status_bias = mathtools.interpolate(
             (ctx.speed + ctx.stamina + ctx.power),
             (
-                (0, 4),
-                (1000, 3),
+                (0, 2),
+                (1000, 1.5),
                 (1450, 1.2),
                 (1800, 1),
             ),
@@ -173,7 +173,7 @@ class Race(single_mode.Race):
 
 class Plugin(auto_derby.Plugin):
     def install(self) -> None:
-        auto_derby.config.single_mode_race_class = Race
+        auto_derby.config.single_mode_race_class = Race_Less
 
 
 auto_derby.plugin.register(__name__, Plugin())
