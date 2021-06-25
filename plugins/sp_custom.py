@@ -12,6 +12,7 @@ class Example_Training(single_mode.Training):
 class Example_Race(single_mode.Race):
     def score(self, ctx: single_mode.Context) -> float:
         ret = super().score(ctx)
+    
         if self.name == "有馬記念":
             ret += 10
         return ret
@@ -22,33 +23,33 @@ class Race_Less(single_mode.Race):
         estimate_order = self.estimate_order(ctx)
         if estimate_order == 1:
             prop, skill = {
-                Race.GRADE_G1: (10, 45),
-                Race.GRADE_G2: (8, 35),
-                Race.GRADE_G3: (8, 35),
-                Race.GRADE_OP: (5, 35),
-                Race.GRADE_PRE_OP: (5, 35),
-                Race.GRADE_NOT_WINNING: (0, 0),
-                Race.GRADE_DEBUT: (0, 0),
+                Race_Less.GRADE_G1: (10, 45),
+                Race_Less.GRADE_G2: (8, 35),
+                Race_Less.GRADE_G3: (8, 35),
+                Race_Less.GRADE_OP: (5, 35),
+                Race_Less.GRADE_PRE_OP: (5, 35),
+                Race_Less.GRADE_NOT_WINNING: (0, 0),
+                Race_Less.GRADE_DEBUT: (0, 0),
             }[self.grade]
         elif 2 <= estimate_order <= 5:
             prop, skill = {
-                Race.GRADE_G1: (5, 40),
-                Race.GRADE_G2: (4, 30),
-                Race.GRADE_G3: (4, 30),
-                Race.GRADE_OP: (2, 20),
-                Race.GRADE_PRE_OP: (2, 20),
-                Race.GRADE_NOT_WINNING: (0, 0),
-                Race.GRADE_DEBUT: (0, 0),
+                Race_Less.GRADE_G1: (5, 40),
+                Race_Less.GRADE_G2: (4, 30),
+                Race_Less.GRADE_G3: (4, 30),
+                Race_Less.GRADE_OP: (2, 20),
+                Race_Less.GRADE_PRE_OP: (2, 20),
+                Race_Less.GRADE_NOT_WINNING: (0, 0),
+                Race_Less.GRADE_DEBUT: (0, 0),
             }[self.grade]
         else:
             prop, skill = {
-                Race.GRADE_G1: (4, 25),
-                Race.GRADE_G2: (3, 20),
-                Race.GRADE_G3: (3, 20),
-                Race.GRADE_OP: (0, 10),
-                Race.GRADE_PRE_OP: (0, 10),
-                Race.GRADE_NOT_WINNING: (0, 0),
-                Race.GRADE_DEBUT: (0, 0),
+                Race_Less.GRADE_G1: (4, 25),
+                Race_Less.GRADE_G2: (3, 20),
+                Race_Less.GRADE_G3: (3, 20),
+                Race_Less.GRADE_OP: (0, 10),
+                Race_Less.GRADE_PRE_OP: (0, 10),
+                Race_Less.GRADE_NOT_WINNING: (0, 0),
+                Race_Less.GRADE_DEBUT: (0, 0),
             }[self.grade]
 
         fan_count = self.fan_counts[estimate_order - 1]
@@ -107,13 +108,13 @@ class Race_Less(single_mode.Race):
         
         # 目標還是希望訓練比比賽多，低級比賽予以較重懲罰偏差，再次降低SKILL POINT重要性
         SP_bias_fan, SP_bias_prop = {
-            Race.GRADE_G1: (1,1),
-            Race.GRADE_G2: (0.7,1),
-            Race.GRADE_G3: (0.5,0.5),
-            Race.GRADE_OP: (0.3,0.5),
-            Race.GRADE_PRE_OP: (0.1,0.1),
-            Race.GRADE_NOT_WINNING: (1,1),
-            Race.GRADE_DEBUT: (1,1),
+            Race_Less.GRADE_G1: (1,1),
+            Race_Less.GRADE_G2: (0.7,1),
+            Race_Less.GRADE_G3: (0.5,0.5),
+            Race_Less.GRADE_OP: (0.3,0.5),
+            Race_Less.GRADE_PRE_OP: (0.1,0.1),
+            Race_Less.GRADE_NOT_WINNING: (1,1),
+            Race_Less.GRADE_DEBUT: (1,1),
         }[self.grade]
 
         
@@ -172,7 +173,7 @@ class Race_Less(single_mode.Race):
         return biased
 #https://i.imgur.com/bgJP98N.jpg
 #目標1200/500/1100/300/400
-class Training_MILE(single_mode.training):
+class Training_Mile(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
         spd = mathtools.integrate(
             ctx.speed,
@@ -182,9 +183,9 @@ class Training_MILE(single_mode.training):
         if ctx.speed < ctx.turn_count() / 24 * 300:
             spd *= 1.5
 
-        sta = mathtools.integrate(
-            ctx.stamina,
-            self.stamina,
+        pow = mathtools.integrate(
+            ctx.power,
+            self.power,
             (
                 (0, 2.0),
                 (300, ctx.speed / 600 + 0.3 * ctx.date[0] if ctx.speed > 600 else 1.0),
@@ -197,14 +198,15 @@ class Training_MILE(single_mode.training):
                 (900, ctx.speed / 900 * 0.3),
             ),
         )
-        pow = mathtools.integrate(
-            ctx.power,
-            self.power,
+        #不要超過六百!!
+        sta = mathtools.integrate(
+            ctx.stamina,
+            self.stamina,
             (
                 (0, 1.0),
                 (300, 0.2 + ctx.speed / 600),
                 (600, 0.1 + ctx.speed / 900),
-                (900, ctx.speed / 900 / 3),
+                (900, 0), 
             ),
         )
         per = mathtools.integrate(
@@ -244,17 +246,18 @@ class Training_MILE(single_mode.training):
             ),
         )
         return (spd + sta + pow + per + int_ + skill) * success_rate
-class Training_Medimum(single_mode.training):
+class Training_Medimum(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
         return 0.0
     
-class Training_Long(single_mode.training):
+class Training_Long(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
         return 0.0
 
 class Plugin(auto_derby.Plugin):
     def install(self) -> None:
         auto_derby.config.single_mode_race_class = Race_Less
+        auto_derby.config.single_mode_training_class = Training_Mile
 
 
 auto_derby.plugin.register(__name__, Plugin())
