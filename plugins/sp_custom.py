@@ -175,77 +175,7 @@ class Race_Less(single_mode.Race):
 #目標1200/500/1100/300/400
 class Training_Mile(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
-        spd = mathtools.integrate(
-            ctx.speed,
-            self.speed,
-            ((0, 2.0), (300, 1.0), (600, 0.8), (900, 0.7), (1100, 0.5)),
-        )
-        if ctx.speed < ctx.turn_count() / 24 * 300:
-            spd *= 1.5
-
-        pow = mathtools.integrate(
-            ctx.power,
-            self.power,
-            (
-                (0, 2.0),
-                (300, ctx.speed / 600 + 0.3 * ctx.date[0] if ctx.speed > 600 else 1.0),
-                (
-                    600,
-                    ctx.speed / 900 * 0.6 + 0.1 * ctx.date[0]
-                    if ctx.speed > 900
-                    else 0.6,
-                ),
-                (900, ctx.speed / 900 * 0.3),
-            ),
-        )
-        #不要超過六百!!
-        sta = mathtools.integrate(
-            ctx.stamina,
-            self.stamina,
-            (
-                (0, 1.0),
-                (300, 0.2 + ctx.speed / 600),
-                (600, 0.1 + ctx.speed / 900),
-                (900, 0), 
-            ),
-        )
-        per = mathtools.integrate(
-            ctx.guts,
-            self.guts,
-            ((0, 2.0), (300, 1.0), (400, 0.3), (600, 0.1))
-            if ctx.speed > 400 / 24 * ctx.turn_count()
-            else ((0, 2.0), (300, 0.5), (400, 0.1)),
-        )
-        int_ = mathtools.integrate(
-            ctx.wisdom,
-            self.wisdom,
-            ((0, 3.0), (300, 1.0), (400, 0.4), (600, 0.2))
-            if ctx.vitality < 0.9
-            else ((0, 2.0), (300, 0.8), (400, 0.1)),
-        )
-
-        if ctx.vitality < 0.9:
-            int_ += 5 if ctx.date[1:] in ((7, 1), (7, 2), (8, 1)) else 3
-
-        skill = self.skill * 0.5
-
-        success_rate = mathtools.interpolate(
-            int(ctx.vitality * 10000),
-            (
-                (0, 0.15),
-                (1500, 0.3),
-                (4000, 1.0),
-            )
-            if self.wisdom > 0
-            else (
-                (0, 0.01),
-                (1500, 0.2),
-                (3000, 0.5),
-                (5000, 0.85),
-                (7000, 1.0),
-            ),
-        )
-        return (spd + sta + pow + per + int_ + skill) * success_rate
+        return 0.0
 class Training_Medimum(single_mode.Training):
     def score(self, ctx: single_mode.Context) -> float:
         return 0.0
@@ -257,7 +187,7 @@ class Training_Long(single_mode.Training):
 class Plugin(auto_derby.Plugin):
     def install(self) -> None:
         auto_derby.config.single_mode_race_class = Race_Less
-        auto_derby.config.single_mode_training_class = Training_Mile
+        # auto_derby.config.single_mode_training_class = Training_Mile
 
 
 auto_derby.plugin.register(__name__, Plugin())
