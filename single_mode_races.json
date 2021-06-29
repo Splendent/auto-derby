@@ -11326,6 +11326,44 @@
     ]
   },
   {
+    "note": "麥坤特別賽",
+    "name": "宝塚記念",
+    "stadium": "京都",
+    "permission": 3,
+    "month": 6,
+    "half": 2,
+    "grade": 100,
+    "entryCount": 18,
+    "distance": 2200,
+    "ground": 1,
+    "track": 3,
+    "turn": 1,
+    "targetStatuses": [
+      1
+    ],
+    "minFanCount": 20000,
+    "fanCounts": [
+      15000,
+      6000,
+      3750,
+      2250,
+      1500,
+      1350,
+      1200,
+      1050,
+      900,
+      750,
+      600,
+      450,
+      375,
+      300,
+      225,
+      150,
+      150,
+      150
+    ]
+  },
+  {
     "name": "巴賞",
     "stadium": "函館",
     "permission": 3,
