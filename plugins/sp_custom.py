@@ -1,5 +1,8 @@
+from __future__ import annotations
 import auto_derby
 from auto_derby import single_mode, mathtools
+from auto_derby import limited_sale
+from auto_derby import action, templates
 import logging
 
 LOGGER = logging.getLogger(__name__)
@@ -185,8 +188,18 @@ class Training_Long(single_mode.Training):
         return 0.0
 
 class Plugin(auto_derby.Plugin):
+    def doNothing(self) -> None:
+        rp = action.resize_proxy()
+        action.wait_tap_image(templates.GO_TO_LIMITED_SALE)
+        action.wait_image(templates.CLOSE_NOW_BUTTON)
+        action.wait_tap_image(templates.CLOSE_NOW_BUTTON)
+        action.wait_tap_image(templates.GREEN_OK_BUTTON)
+        action.wait_image(templates.RETURN_BUTTON)
+        for _, pos in action.match_image_until_disappear(templates.RETURN_BUTTON):
+            action.tap(pos)
     def install(self) -> None:
         auto_derby.config.single_mode_race_class = Race_Less
+        auto_derby.config.on_limited_sale = self.doNothing
         # auto_derby.config.single_mode_training_class = Training_Mile
 
 
