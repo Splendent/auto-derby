@@ -4,22 +4,26 @@
 
 
 import argparse
-from auto_derby import plugin
 import logging
 import logging.handlers
 import os
 import time
+import warnings
 import webbrowser
 
 import win32con
 import win32gui
 
-from . import clients, config, jobs, templates
+from auto_derby import plugin
+
+from . import clients, config, jobs, templates, version
 
 LOGGER = logging.getLogger(__name__)
 
 
 def main():
+    if config.CHECK_UPDATE:
+        version.check_update()
     avaliable_jobs = {
         "team_race": jobs.team_race,
         "champions_meeting": jobs.champions_meeting,
@@ -111,6 +115,7 @@ if __name__ == "__main__":
             continue
         logging.getLogger(i).setLevel(logging.DEBUG)
 
+    warnings.filterwarnings("once", module="auto_derby(\\..*)?")
     try:
         main()
     except SystemExit:

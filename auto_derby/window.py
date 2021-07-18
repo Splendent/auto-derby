@@ -30,12 +30,12 @@ def message_box(
     *,
     flags: int = 0,
     h_wnd: int = 0,
-    on_close: Optional[Callable[[], None]] = None,
+    on_close: Optional[Callable[[int], None]] = None,
 ) -> Callable[[], None]:
     def _run():
-        win32gui.MessageBox(h_wnd, msg, caption, flags)
+        res = win32gui.MessageBox(h_wnd, msg, caption, flags)
         if callable(on_close):
-            on_close()
+            on_close(res)
 
     t = threading.Thread(target=_run)
     t.start()
@@ -145,6 +145,8 @@ def drag_at(
     x, y = win32gui.ClientToScreen(h_wnd, point)
     with topmost(h_wnd), recover_foreground(), recover_cursor():
         mouse.drag(x, y, x + dx, y + dy, duration=duration)
+        move_at(h_wnd, (-1, -1))
+        time.sleep(0.05)
 
 
 def wheel_at(h_wnd: int, delta: int) -> None:
@@ -223,6 +225,3 @@ def screenshot(h_wnd: int) -> PIL.Image.Image:
     if g.use_legacy_screenshot:
         return screenshot_pil_crop(h_wnd)
     return screenshot_print_window(h_wnd)
-
-
-# TODO: move client inside visible area

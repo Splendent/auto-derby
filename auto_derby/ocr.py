@@ -2,18 +2,20 @@
 # pyright: strict
 
 
+import csv
+import errno
 import json
 import logging
 import os
+import warnings
+from pathlib import Path
 from typing import Dict, List, Optional, Text, Tuple
 
 import cv2
 import numpy as np
 from PIL.Image import Image, fromarray
 
-from auto_derby import imagetools
-
-from . import window
+from . import imagetools, terminal
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,21 +23,57 @@ LOGGER = logging.getLogger(__name__)
 class g:
     data_path: str = ""
     image_path: str = ""
+    prompt_disabled = False
 
     labels: Dict[Text, Text] = {}
 
 
+class _g:
+    loaded_data_path = ""
+
+
+def _migrate_json_to_csv() -> None:
+    path = g.data_path
+    if not path.endswith(".json"):
+        return
+
+    g.data_path = str(Path(path).with_suffix(".csv"))
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            g.labels = json.load(f)
+        warnings.warn(
+            f"migrating json ocr labels to {g.data_path}, this support will be removed at next major version.",
+            DeprecationWarning,
+        )
+        for k, v in g.labels.items():
+            _label(k, v)
+        os.rename(path, path + "~")
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            pass
+        else:
+            raise
+
+
 def reload() -> None:
+    _migrate_json_to_csv()
     try:
         with open(g.data_path, "r", encoding="utf-8") as f:
-            g.labels = json.load(f)
+            g.labels = dict((k, v) for k, v in csv.reader(f))
     except OSError:
         pass
+    _g.loaded_data_path = g.data_path
 
 
-def _save() -> None:
-    with open(g.data_path, "w", encoding="utf-8") as f:
-        json.dump(g.labels, f, indent=2, ensure_ascii=False)
+def reload_on_demand() -> None:
+    if _g.loaded_data_path != g.data_path:
+        reload()
+
+
+def _label(image_hash: Text, value: Text) -> None:
+    g.labels[image_hash] = value
+    with open(g.data_path, "a", encoding="utf-8", newline="") as f:
+        csv.writer(f).writerow((image_hash, value))
 
 
 _PREVIEW_PADDING = 4
@@ -47,6 +85,7 @@ def _pad_img(img: np.ndarray, padding: int = _PREVIEW_PADDING) -> np.ndarray:
 
 
 def _query(h: Text) -> Tuple[Text, Text, float]:
+    reload_on_demand()
     # TODO: use a more efficient data structure, maybe vp-tree
     if not g.labels:
         return "", "", 0
@@ -55,6 +94,39 @@ def _query(h: Text) -> Tuple[Text, Text, float]:
         key=lambda x: x[2],
         reverse=True,
     )[0]
+
+
+def _prompt(img: np.ndarray, h: Text, value: Text, similarity: float) -> Text:
+    if g.prompt_disabled:
+        LOGGER.warning(
+            "using low similarity label: hash=%s, value=%s, similarity",
+            h,
+            value,
+            similarity,
+        )
+        return value
+
+    ret = ""
+    close_img = imagetools.show(fromarray(_pad_img(img)), h)
+    try:
+        while len(ret) != 1:
+            ans = ""
+            while value and ans not in ("Y", "N"):
+                ans = terminal.prompt(
+                    f"Matching current displaying image: value={value}, similarity={similarity:0.3f}.\n"
+                    "Is this correct? (Y/N)"
+                ).upper()
+            if ans == "Y":
+                ret = value
+            else:
+                ret = terminal.prompt(
+                    "Corresponding text for current displaying image:"
+                )
+    finally:
+        close_img()
+    _label(h, ret)
+    LOGGER.info("labeled: hash=%s, value=%s", h, ret)
+    return ret
 
 
 def _text_from_image(img: np.ndarray, threshold: float = 0.8) -> Text:
@@ -70,21 +142,7 @@ def _text_from_image(img: np.ndarray, threshold: float = 0.8) -> Text:
     )
     if similarity > threshold:
         return value
-    ans = ""
-    close_img = imagetools.show(fromarray(_pad_img(img)), h)
-    close_msg = window.info("New text encountered\nplease do annotation in terminal")
-    try:
-        while len(ans) != 1:
-            ans = input("Corresponding text for current displaying image:")
-        g.labels[h] = ans
-        LOGGER.info("labeled: hash=%s, value=%s", h, ans)
-    finally:
-        close_msg()
-        close_img()
-    _save()
-    ret = g.labels[h]
-    LOGGER.debug("use label: hash=%s, value=%s", h, ret)
-    return ret
+    return _prompt(img, h, value, similarity)
 
 
 def _union_bbox(

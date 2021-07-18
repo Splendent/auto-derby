@@ -97,7 +97,10 @@ SINGLE_MODE_COMMAND_TRAINING_POS = "single_mode_command_training.pos.png"
 SINGLE_MODE_CONDITION_HEADACHE = "single_mode_condition_headache.png"
 SINGLE_MODE_CONDITION_OVERWEIGHT = "single_mode_condition_overweight.png"
 SINGLE_MODE_CONTINUE = "single_mode_continue.png"
+SINGLE_MODE_CONTINUE_POS = "single_mode_continue.pos.png"
 SINGLE_MODE_CONTINUOUS_RACE_TITLE = "single_mode_continuous_race_title.png"
+SINGLE_MODE_CRANE_GAME_BUTTON = "single_mode_crane_game_button.png"
+SINGLE_MODE_CRANE_GAME_BUTTON_POS = "single_mode_crane_game_button.pos.png"
 SINGLE_MODE_CRANE_GAME_PLAY_GUIDE_BUTTON = (
     "single_mode_crane_game_play_guide_button.png"
 )
@@ -115,11 +118,15 @@ SINGLE_MODE_FINISH_BUTTON_POS = "single_mode_finish_button.pos.png"
 SINGLE_MODE_FORMAL_RACE_BANNER = "single_mode_formal_race_banner.png"
 SINGLE_MODE_FORMAL_RACE_BANNER_POS = "single_mode_formal_race_banner.pos.png"
 SINGLE_MODE_GENE_INHERIT = "single_mode_gene_inherit.png"
+SINGLE_MODE_GO_OUT_MENU_TITLE = "single_mode_go_out_menu_title.png"
+SINGLE_MODE_GO_OUT_MENU_TITLE_POS = "single_mode_go_out_menu_title.pos.png"
+SINGLE_MODE_GO_OUT_OPTION_LEFT_BORDER = "single_mode_go_out_option_left_border.png"
 SINGLE_MODE_GO_TO_SCHEDULED_RACE_BUTTON = "single_mode_go_to_scheduled_race_button.png"
 SINGLE_MODE_GO_TO_SCHEDULED_RACE_BUTTON_POS = (
     "single_mode_go_to_scheduled_race_button.pos.png"
 )
 SINGLE_MODE_GOOD_RACE_ADAPTABILITY_STAR = "single_mode_good_race_adaptability_star.png"
+SINGLE_MODE_LIVE_BUTTON = "single_mode_live_button.png"
 SINGLE_MODE_OPTION1 = "single_mode_option1.png"
 SINGLE_MODE_OPTION1_POS = "single_mode_option1.pos.png"
 SINGLE_MODE_OPTION2 = "single_mode_option2.png"
@@ -150,6 +157,12 @@ SINGLE_MODE_SCHEDULED_RACE_OPENING_BANNER = (
 SINGLE_MODE_SCHEDULED_RACE_OPENING_BANNER_POS = (
     "single_mode_scheduled_race_opening_banner.pos.png"
 )
+SINGLE_MODE_TARGET_RACE_NO_PERMISSION = "single_mode_target_race_no_permission.png"
+SINGLE_MODE_TARGET_RACE_NO_PERMISSION_POS = (
+    "single_mode_target_race_no_permission.pos.png"
+)
+SINGLE_MODE_TARGET_UNFINISHED = "single_mode_target_unfinished.png"
+SINGLE_MODE_TARGET_UNFINISHED_POS = "single_mode_target_unfinished.pos.png"
 SINGLE_MODE_TRAINING_CONFIRM = "single_mode_training_confirm.png"
 SINGLE_MODE_TRAINING_CONFIRM_POS = "single_mode_training_confirm.pos.png"
 SINGLE_MODE_URA_FINALS = "single_mode_ura_finals.png"

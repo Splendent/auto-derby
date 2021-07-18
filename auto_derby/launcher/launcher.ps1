@@ -13,7 +13,7 @@ try {
 catch {
 }
 if (-not $version) {
-    $version = Get-Date -Format "yyyy-MM-dd HH:mm"
+    $version = Get-Content "$WorkspaceFolder\version"
 }
 
 $host.ui.RawUI.WindowTitle = "auto-derby: $version"
@@ -82,6 +82,7 @@ if (-not $mainWindow.ShowDialog()) {
 $data | Format-List -Property (
     "Job",
     "Debug", 
+    "CheckUpdate",
     "PythonExecutablePath",
     "SingleModeChoicesDataPath",
     "PauseIfRaceOrderGt",
@@ -99,24 +100,16 @@ $data | Format-List -Property (
 )
 
 
-if ($data.Debug) {
-    "Installed packages: "
-    
-    & cmd.exe /c "`"$($Data.PythonExecutablePath)`" -m pip list 2>&1" | Select-String (
-        '^opencv-python\b',
-        '^opencv-contrib-python\b', 
-        '^pywin32\b', 
-        '^numpy\b',
-        '^Pillow\b',
-        '^mouse\b',
-        '^cast-unknown\b',
-        '^adb-shell\b'
-    )
-    ""
+if ($data.Debug) {   
     $env:DEBUG = "auto_derby"
     $env:AUTO_DERBY_LAST_SCREENSHOT_SAVE_PATH = "last_screenshot.local.png"
     $env:AUTO_DERBY_OCR_IMAGE_PATH = "ocr_images.local"
     $env:AUTO_DERBY_SINGLE_MODE_EVENT_IMAGE_PATH = "single_mode_event_images.local"
+    $env:AUTO_DERBY_SINGLE_MODE_TRAINING_IMAGE_PATH = "single_mode_training_images.local"
+}
+
+if ($data.CheckUpdate) {
+    $env:AUTO_DERBY_CHECK_UPDATE = "true"
 }
 
 if ($data.SingleModeChoicesDataPath) {
@@ -135,21 +128,6 @@ if ($requireAdmin) {
     $verb = "runAs"
 }
 
-# # https://stackoverflow.com/a/11440595
-# if (-not (
-#         [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-#     ).IsInRole(
-#         [Security.Principal.WindowsBuiltInRole]::Administrator
-#     )
-# ) {
-#     Start-Process PowerShell -Verb runAs -ArgumentList @(
-#         "-Version", "3",
-#         "-NoProfile",
-#         "& '" + $MyInvocation.MyCommand.Definition + "'"
-#     )
-#     return
-# }
-
 $command = @"
 title auto-derby: $version
 cd /d "$WorkspaceFolder"
@@ -157,20 +135,64 @@ set "DEBUG=$($env:DEBUG)"
 set "AUTO_DERBY_LAST_SCREENSHOT_SAVE_PATH=$($env:AUTO_DERBY_LAST_SCREENSHOT_SAVE_PATH)"
 set "AUTO_DERBY_OCR_IMAGE_PATH=$($env:AUTO_DERBY_OCR_IMAGE_PATH)"
 set "AUTO_DERBY_SINGLE_MODE_EVENT_IMAGE_PATH=$($env:AUTO_DERBY_SINGLE_MODE_EVENT_IMAGE_PATH)"
+set "AUTO_DERBY_SINGLE_MODE_TRAINING_IMAGE_PATH=$($env:AUTO_DERBY_SINGLE_MODE_TRAINING_IMAGE_PATH)"
 set "AUTO_DERBY_SINGLE_MODE_CHOICE_PATH=$($env:AUTO_DERBY_SINGLE_MODE_CHOICE_PATH)"
 set "AUTO_DERBY_PAUSE_IF_RACE_ORDER_GT=$($env:AUTO_DERBY_PAUSE_IF_RACE_ORDER_GT)"
 set "AUTO_DERBY_PLUGINS=$($env:AUTO_DERBY_PLUGINS)"
 set "AUTO_DERBY_SINGLE_MODE_TARGET_TRAINING_LEVELS=$($env:AUTO_DERBY_SINGLE_MODE_TARGET_TRAINING_LEVELS)"
 set "AUTO_DERBY_ADB_ADDRESS=$($env:AUTO_DERBY_ADB_ADDRESS)"
+set "AUTO_DERBY_CHECK_UPDATE=$($env:AUTO_DERBY_CHECK_UPDATE)"
 "$($Data.PythonExecutablePath)" -m auto_derby $($data.Job)
 exit
 "@
 
 "command: "
 $command
+""
 Start-Process cmd.exe -Verb $verb -ArgumentList @(
     "/K",
     ($command -split "`n" -join " && ")
 )
+
+
+function Remove-OldFiles {
+    Param (
+        [string]$Path
+    )
+
+    Get-ChildItem -Recurse -File $Path  |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-3) } |
+    ForEach-Object {
+        "Remove: $($_.FullName)"
+        $_ | Remove-Item
+    }
+
+    Get-ChildItem -Recurse -Directory  $Path  |
+    Where-Object { -Not ($_.EnumerateFiles('*',1) | Select-Object -First 1) } |
+    ForEach-Object {
+        "Remove: $($_.FullName)"
+        $_ | Remove-Item -Recurse
+    }
+}
+
+if ($data.Debug) {
+    "Installed packages: "
+    
+    & cmd.exe /c "`"$($Data.PythonExecutablePath)`" -m pip list 2>&1" | Select-String (
+        '^opencv-python\b',
+        '^opencv-contrib-python\b', 
+        '^pywin32\b', 
+        '^numpy\b',
+        '^Pillow\b',
+        '^mouse\b',
+        '^cast-unknown\b',
+        '^adb-shell\b'
+    )
+    ""
+    Remove-OldFiles $env:AUTO_DERBY_OCR_IMAGE_PATH
+    Remove-OldFiles $env:AUTO_DERBY_SINGLE_MODE_EVENT_IMAGE_PATH
+    Remove-OldFiles $env:AUTO_DERBY_SINGLE_MODE_TRAINING_IMAGE_PATH
+}
+
 
 Stop-Transcript

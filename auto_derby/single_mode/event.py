@@ -1,16 +1,20 @@
 # -*- coding=UTF-8 -*-
 # pyright: strict
 
+import csv
+import errno
 import json
 import logging
+import os
+import warnings
+from pathlib import Path
 from typing import Dict, Text
 
 import cv2
 import numpy as np
-from auto_derby import imagetools, window
 from PIL.Image import Image
-import os
-from .. import mathtools
+
+from .. import imagetools, mathtools, terminal
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,22 +23,69 @@ class g:
     event_image_path: str = ""
     data_path: str = ""
     choices: Dict[Text, int] = {}
+    prompt_disabled = False
+
+
+class _g:
+    loaded_data_path = ""
+
+
+def _set(event_id: Text, value: int) -> None:
+    g.choices[event_id] = value
+    with open(g.data_path, "a", encoding="utf-8", newline="") as f:
+        csv.writer(f).writerow((event_id, value))
+
+
+def _migrate_json_to_csv() -> None:
+    path = g.data_path
+    if not path.endswith(".json"):
+        return
+
+    g.data_path = str(Path(path).with_suffix(".csv"))
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            g.choices = json.load(f)
+        warnings.warn(
+            f"migrating json single mode choices to {g.data_path}, this support will be removed at next major version.",
+            DeprecationWarning,
+        )
+        for k, v in g.choices.items():
+            _set(k, v)
+        os.rename(path, path + "~")
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            pass
+        else:
+            raise
 
 
 def reload() -> None:
+    _migrate_json_to_csv()
     try:
         with open(g.data_path, "r", encoding="utf-8") as f:
-            g.choices = json.load(f)
+            g.choices = dict((k, int(v)) for k, v in csv.reader(f))
     except OSError:
         pass
+    _g.loaded_data_path = g.data_path
 
 
-def _save() -> None:
-    with open(g.data_path, "w", encoding="utf-8") as f:
-        json.dump(g.choices, f, indent=2)
+def reload_on_demand() -> None:
+    if _g.loaded_data_path != g.data_path:
+        reload()
 
 
-def get(event_screen: Image) -> int:
+def _prompt_choice(event_id: Text) -> int:
+    if g.prompt_disabled:
+        return 1
+    ans = ""
+    while ans not in ["1", "2", "3", "4", "5"]:
+        ans = terminal.prompt("Choose event option(1/2/3/4/5):")
+    ret = int(ans)
+    _set(event_id, ret)
+    return ret
+
+
+def get_choice(event_screen: Image) -> int:
     rp = mathtools.ResizeProxy(event_screen.width)
     b_img = np.zeros((event_screen.height, event_screen.width))
     event_name_bbox = rp.vector4((75, 155, 305, 180), 466)
@@ -71,17 +122,10 @@ def get(event_screen: Image) -> int:
         cv2.waitKey()
         cv2.destroyAllWindows()
 
-    if event_id not in g.choices:
-        close = window.info("New event encountered\nplease choose option in terminal")
-        try:
-            while True:
-                ans = input("Choose event option(1/2/3/4/5):")
-                if ans in ["1", "2", "3", "4", "5"]:
-                    g.choices[event_id] = int(ans)
-                    _save()
-                    break
-        finally:
-            close()
-    ret = g.choices[event_id]
+    reload_on_demand()
+    if event_id in g.choices:
+        ret = g.choices[event_id]
+    else:
+        ret = _prompt_choice(event_id)
     LOGGER.info("event: id=%s choice=%d", event_id, ret)
     return ret

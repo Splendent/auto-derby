@@ -6,7 +6,8 @@ import json
 import logging
 import math
 import os
-from typing import Any, Dict, Iterator, Text, Tuple, Type
+import warnings
+from typing import Any, Dict, Iterator, Set, Text, Tuple, Type
 
 import cast_unknown as cast
 import cv2
@@ -26,9 +27,36 @@ class g:
     race_class: Type[Race]
 
 
-def reload() -> None:
+class _g:
+    loaded_data_path = ""
+
+
+def _iter_races():
+    with open(g.data_path, "r", encoding="utf-8") as f:
+        for line in f:
+            yield Race.new().from_dict(json.loads(line))
+
+
+def _load_legacy_json():
+    warnings.warn(
+        "json race data support will be removed at next major version, use jsonl instead",
+        DeprecationWarning,
+    )
     with open(g.data_path, "r", encoding="utf-8") as f:
         g.races = tuple(Race.new().from_dict(i) for i in json.load(f))
+
+
+def reload() -> None:
+    if g.data_path.endswith(".json"):
+        _load_legacy_json()
+        return
+    g.races = tuple(_iter_races())
+    _g.loaded_data_path = g.data_path
+
+
+def reload_on_demand() -> None:
+    if _g.loaded_data_path != g.data_path:
+        reload()
 
 
 def _running_style_single_score(
@@ -419,23 +447,25 @@ class Race:
         self.turn: int = 0
         self.target_statuses: Tuple[int, ...] = ()
         self.fan_counts: Tuple[int, ...] = ()
+        self.characters: Set[Text] = set()
 
     def to_dict(self) -> Dict[Text, Any]:
         return {
-            "name": self.name,
             "stadium": self.stadium,
+            "name": self.name,
+            "grade": self.grade,
+            "ground": self.ground,
+            "distance": self.distance,
             "permission": self.permission,
             "month": self.month,
             "half": self.half,
-            "grade": self.grade,
             "entryCount": self.entry_count,
-            "distance": self.distance,
-            "ground": self.ground,
             "track": self.track,
             "turn": self.turn,
             "targetStatuses": self.target_statuses,
             "minFanCount": self.min_fan_count,
             "fanCounts": self.fan_counts,
+            "characters": sorted(self.characters),
         }
 
     @classmethod
@@ -455,6 +485,7 @@ class Race:
         self.target_statuses = tuple(data["targetStatuses"])
         self.min_fan_count = data["minFanCount"]
         self.fan_counts = tuple(data["fanCounts"])
+        self.characters = set(data.get("characters", []))
         return self
 
     @property
@@ -658,6 +689,7 @@ g.race_class = Race
 
 
 def find_by_date(date: Tuple[int, int, int]) -> Iterator[Race]:
+    reload_on_demand()
     year, month, half = date
     for i in g.races:
         if year not in i.years:
@@ -680,6 +712,10 @@ def find(ctx: Context) -> Iterator[Race]:
         if i.grade < Race.GRADE_NOT_WINNING and not ctx.is_after_winning:
             continue
         if ctx.fan_count < i.min_fan_count:
+            continue
+        # character specific race always be target race,
+        # should be excluded when finding available race
+        if i.characters:
             continue
         yield i
 
@@ -737,17 +773,17 @@ def _recognize_spec(img: PIL.Image.Image) -> Tuple[Text, int, int, int, int]:
 
 
 def _recognize_grade(rgb_color: Tuple[int, ...]) -> Tuple[int, ...]:
-    if imagetools.compare_color((54, 133, 228), rgb_color) > 0.9:
+    if imagetools.compare_color((54, 133, 228), rgb_color) > 0.8:
         return (Race.GRADE_G1,)
-    if imagetools.compare_color((244, 85, 129), rgb_color) > 0.9:
+    if imagetools.compare_color((244, 85, 129), rgb_color) > 0.8:
         return (Race.GRADE_G2,)
-    if imagetools.compare_color((57, 187, 85), rgb_color) > 0.9:
+    if imagetools.compare_color((57, 187, 85), rgb_color) > 0.8:
         return (Race.GRADE_G3,)
-    if imagetools.compare_color((252, 169, 5), rgb_color) > 0.9:
+    if imagetools.compare_color((252, 169, 5), rgb_color) > 0.8:
         return Race.GRADE_OP, Race.GRADE_PRE_OP
-    if imagetools.compare_color((148, 203, 8), rgb_color) > 0.9:
+    if imagetools.compare_color((148, 203, 8), rgb_color) > 0.8:
         return Race.GRADE_DEBUT, Race.GRADE_NOT_WINNING
-    if imagetools.compare_color((247, 209, 41), rgb_color) > 0.9:
+    if imagetools.compare_color((247, 209, 41), rgb_color) > 0.8:
         # EX(URA)
         return (Race.GRADE_G1,)
     raise ValueError("_recognize_grade: unknown grade color: %s" % (rgb_color,))
@@ -789,4 +825,4 @@ def find_by_race_detail_image(ctx: Context, screenshot: PIL.Image.Image) -> Race
             LOGGER.info("image match: %s", i)
             return i
 
-    raise ValueError("find_by_race_details_image: can race match spec: %s", full_spec)
+    raise ValueError("find_by_race_details_image: no race match spec: %s", full_spec)

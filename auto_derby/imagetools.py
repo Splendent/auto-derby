@@ -13,15 +13,19 @@ import cv2.img_hash
 import numpy as np
 from PIL.Image import BICUBIC, Image, fromarray
 
+_Resample = Literal[0, 1, 2, 3, 4, 5]
 
-def md5(b_img: np.ndarray, *, save_path: Optional[Text] = None) -> Text:
+
+def md5(
+    b_img: np.ndarray, *, save_path: Optional[Text] = None, save_mode: Text = "1"
+) -> Text:
     _id = hashlib.md5(b_img.tobytes()).hexdigest()
 
     if save_path:
         dst = Path(save_path) / _id[0] / _id[1:3] / (_id[3:] + ".png")
         if not dst.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
-            fromarray(b_img).convert("1").save(dst)
+            pil_image(b_img).convert(save_mode).save(dst)
 
     return _id
 
@@ -190,7 +194,7 @@ def resize(
     *,
     height: Optional[int] = None,
     width: Optional[int] = None,
-    resample: int = BICUBIC,
+    resample: _Resample = BICUBIC,
 ) -> Image:
     if height and width:
         return img.resize((width, height), resample=resample)
@@ -231,7 +235,7 @@ def show(img: Image, title: Text = "") -> Callable[[], None]:
     title = f"{title} - {_WINDOW_ID['value']}"
 
     def _run():
-        cv_img = np.asarray(img)
+        cv_img = cv_image(img)
         try:
             cv2.imshow(title, cv_img)
             while not stop_event.is_set() and cv2.getWindowProperty(title, 0) >= 0:

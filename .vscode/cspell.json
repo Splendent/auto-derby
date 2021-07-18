@@ -2,11 +2,19 @@
     "version": "0.1",
     "words": [
         "astype",
+        "cygames",
         "dmmgameplayer",
+        "ENOENT",
+        "errno",
+        "jsonl",
+        "LANCZOS",
+        "nargs",
         "ndarray",
         "numpy",
+        "pyright",
         "tmpl",
         "umamusume",
+        "umapyoi",
         "WINNT"
     ]
 }
